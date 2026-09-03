@@ -64,6 +64,10 @@ open "WellSpent/build/WellSpent.app"
 
 外观选择与待办数据均保存在本机 `~/Library/Application Support/WellSpent/`，不会上传到网络。
 
+## 灵感来源
+
+WellSpent 基于 [今天没白活](https://github.com/lijigang/JintianMeiBaihuo) 修改，并在此基础上重新设计了视觉主题、外观模式、应用名称、图标与项目结构。
+
 ## License
 
 MIT © 2026 Howell · Scott · Stark
