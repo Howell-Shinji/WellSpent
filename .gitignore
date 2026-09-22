@@ -22,3 +22,6 @@ xcuserdata/
 # Logs / tmp
 *.log
 *.tmp
+
+# VScode
+.vscode/
