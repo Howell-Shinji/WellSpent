@@ -37,15 +37,7 @@ else
     SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
 fi
 
-SOURCES=(
-    "$SRC_DIR/Todo.swift"
-    "$SRC_DIR/TodoStore.swift"
-    "$SRC_DIR/TokyoNightTheme.swift"
-    "$SRC_DIR/CompletionToggle.swift"
-    "$SRC_DIR/TodoRow.swift"
-    "$SRC_DIR/ContentView.swift"
-    "$SRC_DIR/App.swift"
-)
+SOURCES=("$SRC_DIR"/*.swift)
 
 xcrun swiftc \
     -O \

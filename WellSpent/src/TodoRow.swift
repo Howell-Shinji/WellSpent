@@ -1,108 +1,124 @@
 import SwiftUI
 
 struct TodoRow: View {
+    @EnvironmentObject var store: TodoStore
     let todo: Todo
-    let onToggle: () -> Void
-    let onUpdate: (String) -> Void
-    let onDelete: () -> Void
-
-    @State private var isEditing = false
-    @State private var draft = ""
     @State private var isHovered = false
+    @State private var isExpanded = false
+    @State private var fullTextHeight: CGFloat = 0
+    @State private var visibleTextHeight: CGFloat = 0
     @FocusState private var editFocused: Bool
 
+    private var isEditing: Bool { store.editingID == todo.id }
+    private var textFont: Font { todo.completed ? Theme.body() : Theme.bodyStrong() }
+
     var body: some View {
-        HStack(alignment: .center, spacing: TokyoNightTheme.spacingM) {
-            CompletionToggle(checked: todo.completed, action: onToggle)
+        VStack(alignment: .leading, spacing: Theme.spacingS) {
+            HStack(alignment: .top, spacing: Theme.spacingM) {
+                CompletionToggle(checked: todo.completed) { store.toggle(todo.id) }
+                VStack(alignment: .leading, spacing: Theme.spacingXS) {
+                    if isEditing {
+                        TextField("待办内容", text: $store.editDraft, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .font(Theme.body())
+                            .foregroundColor(Theme.textPrimary)
+                            .tint(Theme.accent)
+                            .lineLimit(1...8)
+                            .focused($editFocused)
+                            .accessibilityLabel("编辑待办")
+                            .onSubmit { store.commitEditing(ifMatching: todo.id) }
+                            .onExitCommand { store.cancelEditing(todo.id) }
+                            .onAppear { editFocused = true }
+                    } else {
+                        Text(todo.text)
+                            .font(textFont)
+                            .foregroundColor(todo.completed ? Theme.textMuted : Theme.textPrimary)
+                            .strikethrough(todo.completed, color: Theme.textMuted)
+                            .lineLimit(isExpanded ? nil : 2)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background {
+                                GeometryReader { proxy in
+                                    Color.clear
+                                        .onAppear { visibleTextHeight = proxy.size.height }
+                                        .onChange(of: proxy.size.height) { visibleTextHeight = $0 }
+                                }
+                            }
+                            .overlay(alignment: .topLeading) {
+                                Text(todo.text)
+                                    .font(textFont)
+                                    .lineLimit(nil)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background {
+                                        GeometryReader { proxy in
+                                            Color.clear
+                                                .onAppear { fullTextHeight = proxy.size.height }
+                                                .onChange(of: proxy.size.height) { fullTextHeight = $0 }
+                                        }
+                                    }
+                                    .hidden()
+                                    .accessibilityHidden(true)
+                                    .allowsHitTesting(false)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture(count: 2) { store.beginEditing(todo.id) }
+                            .onTapGesture {
+                                if store.editingID != todo.id { store.commitEditing() }
+                            }
+                            .accessibilityAction(named: "编辑") { store.beginEditing(todo.id) }
+
+                        if isExpanded || fullTextHeight > visibleTextHeight + 1 {
+                            Button(isExpanded ? "收起" : "展开全文") {
+                                store.commitEditing()
+                                isExpanded.toggle()
+                            }
+                            .buttonStyle(.plain)
+                            .font(Theme.small())
+                            .foregroundColor(Theme.accent)
+                        }
+                    }
+                }
+                .padding(.top, 3)
+
+                Button { store.delete(todo.id) } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(isHovered ? Theme.danger : Theme.textMuted)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("删除，可撤销")
+                .accessibilityLabel("删除 \(todo.text)")
+            }
 
             if isEditing {
-                TextField(
-                    "",
-                    text: $draft,
-                    prompt: Text("待办内容").foregroundColor(TokyoNightTheme.textMuted)
-                )
-                    .textFieldStyle(.plain)
-                    .font(TokyoNightTheme.body())
-                    .foregroundColor(TokyoNightTheme.textPrimary)
-                    .tint(TokyoNightTheme.accent)
-                    .accessibilityLabel("编辑待办")
-                    .focused($editFocused)
-                    .onSubmit {
-                        commit()
-                    }
-                    .onExitCommand {
-                        cancel()
-                    }
-                    .onAppear {
-                        editFocused = true
-                    }
-            } else {
-                Text(todo.text)
-                    .font(todo.completed ? TokyoNightTheme.body() : TokyoNightTheme.bodyStrong())
-                    .foregroundColor(
-                        todo.completed
-                            ? TokyoNightTheme.textMuted
-                            : TokyoNightTheme.textPrimary
-                    )
-                    .strikethrough(todo.completed, color: TokyoNightTheme.textMuted)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        beginEditing()
-                    }
-                    .accessibilityAction(named: "编辑") {
-                        beginEditing()
-                    }
+                HStack {
+                    Text("空内容会保留原任务")
+                        .foregroundColor(Theme.textMuted)
+                    Spacer()
+                    Button("取消") { store.cancelEditing(todo.id) }
+                    Button("保存") { store.commitEditing(ifMatching: todo.id) }
+                }
+                .buttonStyle(.plain)
+                .font(Theme.small())
+                .foregroundColor(Theme.accent)
             }
-
-            Spacer(minLength: 0)
-
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 12.5, weight: .medium))
-                    .foregroundColor(isHovered ? TokyoNightTheme.danger : TokyoNightTheme.textMuted)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        RoundedRectangle(cornerRadius: TokyoNightTheme.radiusS, style: .continuous)
-                            .fill(isHovered ? TokyoNightTheme.danger.opacity(0.10) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("删除")
-            .accessibilityLabel("删除 \(todo.text)")
         }
-        .padding(.horizontal, TokyoNightTheme.spacingM)
-        .padding(.vertical, TokyoNightTheme.spacingS)
-        .background(
-            RoundedRectangle(cornerRadius: TokyoNightTheme.radiusM, style: .continuous)
-                .fill(TokyoNightTheme.surface)
-        )
+        .padding(.horizontal, Theme.spacingM)
+        .padding(.vertical, Theme.spacingS)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusM).fill(Theme.surface))
         .overlay(
-            RoundedRectangle(cornerRadius: TokyoNightTheme.radiusM, style: .continuous)
-                .stroke(
-                    isEditing || isHovered
-                        ? TokyoNightTheme.accent.opacity(isEditing ? 0.85 : 0.46)
-                        : TokyoNightTheme.border.opacity(0.72),
-                    lineWidth: TokyoNightTheme.hairline
-                )
+            RoundedRectangle(cornerRadius: Theme.radiusM)
+                .stroke(isEditing || isHovered ? Theme.accent.opacity(isEditing ? 0.85 : 0.46)
+                        : Theme.border.opacity(0.72), lineWidth: Theme.hairline)
         )
         .onHover { isHovered = $0 }
-    }
-
-    private func commit() {
-        onUpdate(draft)
-        isEditing = false
-    }
-
-    private func beginEditing() {
-        draft = todo.text
-        isEditing = true
-    }
-
-    private func cancel() {
-        draft = todo.text
-        isEditing = false
+        .onChange(of: editFocused) { focused in
+            if !focused {
+                DispatchQueue.main.async { store.commitEditing(ifMatching: todo.id) }
+            }
+        }
+        .onDisappear { store.commitEditing(ifMatching: todo.id) }
     }
 }

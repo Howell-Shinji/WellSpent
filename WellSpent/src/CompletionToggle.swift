@@ -10,13 +10,13 @@ struct CompletionToggle: View {
         Button(action: action) {
             ZStack {
                 Circle()
-                    .fill(checked ? TokyoNightTheme.success : TokyoNightTheme.surfaceElevated)
+                    .fill(checked ? Theme.success : Theme.surfaceElevated)
                     .overlay(
                         Circle()
                             .stroke(
                                 checked
-                                    ? TokyoNightTheme.success
-                                    : (isHovered ? TokyoNightTheme.accent : TokyoNightTheme.textMuted),
+                                    ? Theme.success
+                                    : (isHovered ? Theme.accent : Theme.textMuted),
                                 lineWidth: 1.5
                             )
                     )
@@ -24,7 +24,7 @@ struct CompletionToggle: View {
                 if checked {
                     Image(systemName: "checkmark")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(TokyoNightTheme.onSuccess)
+                        .foregroundColor(Theme.onSuccess)
                 }
             }
             .frame(width: 22, height: 22)
