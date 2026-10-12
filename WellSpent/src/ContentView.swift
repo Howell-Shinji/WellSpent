@@ -197,7 +197,7 @@ struct ContentView: View {
                 .padding(Theme.spacingXL)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: Theme.spacingS) {
+                    VStack(spacing: Theme.spacingS) {
                         ForEach(store.activeItems) { todo in
                             TodoRow(todo: todo)
                         }
@@ -348,7 +348,7 @@ struct ContentView: View {
                     .tint(Theme.accent)
                     .accessibilityLabel("窗口透明度")
             }
-            Text("WellSpent · v2.0.0")
+            Text("WellSpent · v2.0.1")
                 .font(Theme.small())
                 .foregroundColor(Theme.textMuted)
         }

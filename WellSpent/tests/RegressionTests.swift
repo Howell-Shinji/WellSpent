@@ -4,7 +4,7 @@ import AppKit
 @main
 struct RegressionTests {
     @MainActor
-    static func main() throws {
+    static func main() async throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("wellspent-tests-\(UUID().uuidString)")
         try fm.createDirectory(at: root, withIntermediateDirectories: true)
@@ -45,6 +45,22 @@ struct RegressionTests {
         store.undoDeletion()
         expect(store.items.map(\.text) == ["第一项", "第二项", "后来新增", "清理后新增"], "batch undo restores original order")
         expect(store.completedItems.count == 2, "batch undo preserves completion state")
+
+        let timed = TodoStore(directory: directory("timed-undo"), defaults: defaults,
+                              undoDuration: .milliseconds(120))
+        timed.add("先删除")
+        timed.add("后删除")
+        let firstTimedID = timed.items[0].id
+        let secondTimedID = timed.items[1].id
+        timed.delete(firstTimedID)
+        try await Task.sleep(for: .milliseconds(70))
+        timed.delete(secondTimedID)
+        try await Task.sleep(for: .milliseconds(80))
+        expect(timed.undoMessage != nil, "a new deletion restarts the undo window")
+        try await Task.sleep(for: .milliseconds(80))
+        expect(timed.undoMessage == nil, "undo banner expires after a short delay")
+        timed.undoDeletion()
+        expect(timed.items.isEmpty, "expired deletion cannot be undone")
 
         store.beginEditing(first)
         store.editDraft = "已修改"

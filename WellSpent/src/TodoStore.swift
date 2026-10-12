@@ -34,10 +34,14 @@ final class TodoStore: ObservableObject {
 
     private let defaults: UserDefaults
     private let repository: TodoRepository
+    private let undoDuration: Duration
     private var deletedItems: [(index: Int, item: Todo)] = []
+    private var undoExpiryTask: Task<Void, Never>?
 
-    init(directory: URL? = nil, defaults: UserDefaults = .standard) {
+    init(directory: URL? = nil, defaults: UserDefaults = .standard,
+         undoDuration: Duration = .seconds(5)) {
         self.defaults = defaults
+        self.undoDuration = undoDuration
         let root = directory ?? FileManager.default.urls(for: .applicationSupportDirectory,
                                                          in: .userDomainMask)[0]
             .appendingPathComponent("WellSpent", isDirectory: true)
@@ -119,12 +123,27 @@ final class TodoStore: ObservableObject {
         let ids = Set(removed.map { $0.item.id })
         items.removeAll { ids.contains($0.id) }
         undoMessage = "已删除 \(removed.count) 项"
+        scheduleUndoExpiry()
         changed()
+    }
+
+    private func scheduleUndoExpiry() {
+        undoExpiryTask?.cancel()
+        let duration = undoDuration
+        undoExpiryTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else { return }
+            self?.deletedItems = []
+            self?.undoMessage = nil
+            self?.undoExpiryTask = nil
+        }
     }
 
     func undoDeletion() {
         guard !isReadBlocked, !deletedItems.isEmpty else { return }
         commitEditing()
+        undoExpiryTask?.cancel()
+        undoExpiryTask = nil
         for removed in deletedItems where !items.contains(where: { $0.id == removed.item.id }) {
             items.insert(removed.item, at: min(removed.index, items.count))
         }
