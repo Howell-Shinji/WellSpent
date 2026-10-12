@@ -1,90 +1,53 @@
-# WellSpent v2
+# WellSpent
 
-> 置顶浮动的 Tokyo Night 待办小窗 · a focused floating todo app for macOS
+> 把时间留给值得的事。
 
-一个一直飘在屏幕角落的小窗口，提醒你今天该做什么。写进去、做完了、划掉，一天就有了形状。
+我想要的待办工具很简单：随手记，做完勾掉，然后继续做正事。WellSpent 是一扇留在 macOS 桌面角落的小窗，不打算把一件待办包装成一套工作流。
 
 <p align="center">
-  <img src="attachments/screenshot-v2.png" alt="WellSpent app screenshot" width="380">
+  <img src="attachments/screenshot-v2.png" alt="WellSpent 界面预览" width="380">
 </p>
 
-## v2.0.1 修复
+## 下载
 
-- 修复完成任务后，任务行可能仍显示未完成圆圈、状态与分组不一致的问题。
-- 删除后的撤销提示现在保留 5 秒；连续删除会重新计时。
+从 [GitHub Releases](https://github.com/Howell-Shinji/WellSpent/releases/latest) 下载最新 DMG，把 `WellSpent.app` 拖进「应用程序」。支持 macOS 13 及以上。
 
-## v2.0.0 更新
+应用尚未签名或公证。首次启动如果被 macOS 拦截，可在 Finder 中右键点击 `WellSpent.app`，选择「打开」并确认。
 
-- 删除和清除已完成后，可用界面上的“撤销”恢复最近一次删除；后续新增内容不会被覆盖。撤销记录只保留在当前运行期间。
-- 编辑支持保存、取消、失焦提交；空内容保留原任务，长文本支持展开。
-- 每次操作立即保存，保留上一份有效备份；保存失败可重试，退出前会提示未保存的更改。
-- 读取异常时尝试恢复有效备份并保留原文件；没有可用备份时阻止覆盖，提供重试和打开数据文件夹入口。
-- 记住窗口位置与尺寸，显示器断开后将窗口移回可见区域；设置中可关闭置顶。
-- 未完成任务优先，已完成项可折叠；计数改为“剩余 N 项”，不再暗示按天统计。
-- 本次没有新增快捷键；保留原有的 Enter 提交和 Esc 取消。
+## 怎么用
 
-## 核心特性
+- 输入待办，按 `Enter` 添加。
+- 点击圆圈标记完成或恢复未完成；已完成项收在下方，可以折叠。标题只统计剩余项。
+- 双击文字编辑；`Enter` 保存，`Esc` 取消。长任务可以展开。
+- 点击垃圾桶删除；5 秒内可点击「撤销」。连续删除会重新计时。
+- 点击齿轮选择跟随系统、浅色或深色模式，也可调整置顶和透明度（30%–100%）。
 
-- 🪟 **置顶浮动** — 默认置顶，也可在设置中关闭
-- 🖱️ **可拖动** — 点背景拖动，重启后恢复上次位置与尺寸
-- 👻 **透明度可调** — 30%–100% 自由调，不挡事
-- 🌃 **Tokyo Night 视觉** — 以夜间与 Light 调色板为基础，清晰区分内容、状态与操作
-- 🌓 **三档外观** — 可跟随 macOS，也可手动固定浅色或深色
-- 💾 **本地持久化** — 数据保存在 `~/Library/Application Support/WellSpent/`，不会联网
+## 几个设计决定
 
-## 使用
+- **少打扰。** 窗口默认置顶，也能关闭置顶；位置和尺寸会记住。界面采用 Tokyo Night 配色，浅色与深色分别设计，不是简单反相。
+- **数据留在本机。** 待办保存在 `~/Library/Application Support/WellSpent/`。没有账号、云同步或网络请求。
+- **出错要说清楚。** 每次修改立即保存，并保留上一份有效备份。读取失败时不会把原文件当成空列表覆盖；保存失败会提示重试。
 
-- 回车 / 点输入框右侧箭头 — 添加待办
-- 点复选框 — 完成 / 取消完成
-- 双击文字 — 编辑；点击保存或回车提交，取消或 Esc 放弃修改，点击别处提交非空修改
-- 点垃圾桶 — 删除；5 秒内可点击底部“撤销”恢复最近一次删除
-- 点“已完成” — 展开或折叠完成项
-- 点“展开全文” — 查看长任务
-- 点标题右侧齿轮 — 选择外观模式、置顶或透明度
+## 当前版本
 
-## 安装
+v2.0.1 修复了完成任务后勾选状态可能显示错误的问题，并把删除撤销提示缩短为 5 秒。v2 还加入了任务编辑、备份恢复、窗口位置记忆和置顶开关。
 
-### 方式一：下载 DMG（推荐）
+## 从源码构建
 
-到 [Releases](../../releases) 下载最新版 DMG，双击打开，把 `WellSpent.app` 拖进 Applications。
-
-> ⚠️ 未代码签名。首次启动会被 Gatekeeper 拦，解决办法：**右键点 app 图标 → 选「打开」→ 弹窗里再点一次「打开」**。之后正常双击即可。
-
-### 方式二：从源码构建
-
-需要 macOS 13+ 和 Xcode Command Line Tools。
-
-下载或克隆本仓库后，在项目根目录运行：
+需要 macOS 13+ 和 Xcode Command Line Tools。在仓库根目录运行：
 
 ```bash
+bash ./WellSpent/scripts/test.sh
 ./WellSpent/scripts/build.sh
 open "WellSpent/build/WellSpent.app"
 ```
 
-打包 DMG：
-
-```bash
-./WellSpent/scripts/package-dmg.sh           # 从应用读取版本号，当前为 2.0.1
-bash ./WellSpent/scripts/test.sh            # 使用临时数据运行回归测试
-```
-
-## 技术栈
-
-- SwiftUI + AppKit (NSApplicationDelegate 配置 NSWindow)
-- Foundation + Combine（同步原子保存、备份与状态更新）
-- 零第三方依赖
-- 直接 `swiftc` 编译 + 手动组装 `.app` bundle（不依赖 Xcode 项目文件）
-
-## 视觉系统
-
-界面以 Tokyo Night 的蓝紫夜色和低干扰层级为基础；浅色模式使用 Tokyo Night Light 的对应色值，而不是简单反相。活动任务保持高对比，完成状态退居次要层级，蓝色只用于当前操作和选中状态，绿色与红色分别表达完成与删除。
-
-待办与备份保存在本机 `~/Library/Application Support/WellSpent/`，窗口与外观偏好保存在本机 UserDefaults，不会上传到网络。
+需要 DMG 时，再运行 `./WellSpent/scripts/package-dmg.sh`。项目使用 SwiftUI + AppKit，不依赖第三方库；构建脚本直接调用 `swiftc`。
 
 ## 灵感来源
 
-WellSpent 基于 [今天没白活](https://github.com/lijigang/JintianMeiBaihuo) 修改，并在此基础上重新设计了视觉主题、外观模式、应用名称、图标与项目结构。
+WellSpent 基于 [今天没白活](https://github.com/lijigang/JintianMeiBaihuo) 修改。视觉主题、外观模式、名称、图标与项目结构在此基础上重新设计。
 
-## License
+## 许可
 
-MIT © 2026 Howell · Scott · Stark
+[MIT](LICENSE) © 2026 Howell · Scott · Stark
