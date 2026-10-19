@@ -10,7 +10,7 @@
 
 ## 下载
 
-从 [GitHub Releases](https://github.com/Howell-Shinji/WellSpent/releases/latest) 下载最新 DMG，把 `WellSpent.app` 拖进「应用程序」。支持 macOS 13 及以上。
+从 [GitHub Releases](https://github.com/Howell-Shinji/WellSpent/releases/latest) 下载最新 DMG，把 `WellSpent.app` 拖进「应用程序」。目前支持 Apple Silicon Mac（macOS 13 及以上），不支持 Intel Mac。
 
 应用尚未签名或公证。首次启动如果被 macOS 拦截，可在 Finder 中右键点击 `WellSpent.app`，选择「打开」并确认。
 
@@ -20,7 +20,7 @@
 - 点击圆圈标记完成或恢复未完成；已完成项收在下方，可以折叠。标题只统计剩余项。
 - 点击任务右侧的旗帜设置高、普通或低优先级；未完成项按等级排列，同级保持原有顺序。旧任务默认为普通。
 - 双击文字编辑；`Enter` 保存，`Esc` 取消。长任务可以展开。
-- 点击垃圾桶删除；5 秒内可点击「撤销」。连续删除会重新计时。
+- 点击垃圾桶删除；5 秒内可点击「撤销」。连续删除会重新计时，一次撤销可恢复这段时间内删除的全部任务。
 - 点击齿轮选择跟随系统、浅色或深色模式，也可调整置顶和透明度（30%–100%）。
 
 ## 几个设计决定
@@ -31,11 +31,11 @@
 
 ## 当前版本
 
-v2.1.0 加入三级优先级与自动排序，并兼容旧版待办数据。v2.0.1 修复了完成状态显示错误，并把删除撤销提示缩短为 5 秒。
+v2.1.1 修复了连续删除时撤销不完整、撤销普通任务却展开已完成列表的问题。v2.1.0 加入三级优先级与自动排序，并兼容旧版待办数据。
 
 ## 从源码构建
 
-需要 macOS 13+ 和 Xcode Command Line Tools。在仓库根目录运行：
+需要 Apple Silicon Mac、macOS 13+ 和 Xcode Command Line Tools。在仓库根目录运行：
 
 ```bash
 bash ./WellSpent/scripts/test.sh

@@ -35,16 +35,26 @@ struct RegressionTests {
         expect(!store.hasUnsavedChanges, "successful save is acknowledged")
         store.delete(first)
         store.add("后来新增")
-        store.undoDeletion()
+        expect(!store.undoDeletion(), "undoing an active task does not expand completed tasks")
         expect(store.items.map(\.text) == ["第一项", "第二项", "后来新增"], "undo preserves later additions and order")
         expect(store.undoMessage == nil, "undo consumed once")
         store.toggle(first)
         store.toggle(second)
         store.clearCompleted()
         store.add("清理后新增")
-        store.undoDeletion()
+        expect(store.undoDeletion(), "undoing completed tasks makes them visible")
         expect(store.items.map(\.text) == ["第一项", "第二项", "后来新增", "清理后新增"], "batch undo restores original order")
         expect(store.completedItems.count == 2, "batch undo preserves completion state")
+
+        let consecutive = TodoStore(directory: directory("consecutive-undo"), defaults: defaults)
+        for text in ["甲", "乙", "丙"] { consecutive.add(text) }
+        consecutive.delete(consecutive.items[0].id)
+        consecutive.add("后来新增")
+        consecutive.delete(consecutive.items[0].id)
+        expect(consecutive.undoMessage == "已删除 2 项", "successive deletions share one undo banner")
+        expect(!consecutive.undoDeletion(), "undoing active tasks leaves completed tasks collapsed")
+        expect(consecutive.items.map(\.text) == ["甲", "乙", "丙", "后来新增"],
+               "one undo restores successive deletions around later additions")
 
         let timed = TodoStore(directory: directory("timed-undo"), defaults: defaults,
                               undoDuration: .milliseconds(120))

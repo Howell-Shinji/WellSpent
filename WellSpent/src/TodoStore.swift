@@ -44,7 +44,7 @@ final class TodoStore: ObservableObject {
     private let defaults: UserDefaults
     private let repository: TodoRepository
     private let undoDuration: Duration
-    private var deletedItems: [(index: Int, item: Todo)] = []
+    private var deletedBatches: [[(index: Int, item: Todo)]] = []
     private var undoExpiryTask: Task<Void, Never>?
 
     init(directory: URL? = nil, defaults: UserDefaults = .standard,
@@ -137,10 +137,10 @@ final class TodoStore: ObservableObject {
             predicate(item) ? (index: index, item: item) : nil
         }
         guard !removed.isEmpty else { return }
-        deletedItems = removed
+        deletedBatches.append(removed)
         let ids = Set(removed.map { $0.item.id })
         items.removeAll { ids.contains($0.id) }
-        undoMessage = "已删除 \(removed.count) 项"
+        undoMessage = "已删除 \(deletedBatches.reduce(0) { $0 + $1.count }) 项"
         scheduleUndoExpiry()
         changed()
     }
@@ -151,23 +151,29 @@ final class TodoStore: ObservableObject {
         undoExpiryTask = Task { [weak self] in
             try? await Task.sleep(for: duration)
             guard !Task.isCancelled else { return }
-            self?.deletedItems = []
+            self?.deletedBatches = []
             self?.undoMessage = nil
             self?.undoExpiryTask = nil
         }
     }
 
-    func undoDeletion() {
-        guard !isReadBlocked, !deletedItems.isEmpty else { return }
+    @discardableResult
+    func undoDeletion() -> Bool {
+        guard !isReadBlocked, !deletedBatches.isEmpty else { return false }
         commitEditing()
         undoExpiryTask?.cancel()
         undoExpiryTask = nil
-        for removed in deletedItems where !items.contains(where: { $0.id == removed.item.id }) {
-            items.insert(removed.item, at: min(removed.index, items.count))
+        var restoredCompleted = false
+        for batch in deletedBatches.reversed() {
+            for removed in batch where !items.contains(where: { $0.id == removed.item.id }) {
+                items.insert(removed.item, at: min(removed.index, items.count))
+                restoredCompleted = restoredCompleted || removed.item.completed
+            }
         }
-        deletedItems = []
+        deletedBatches = []
         undoMessage = nil
         changed()
+        return restoredCompleted
     }
 
     func dismissNotice() { storageNotice = nil }

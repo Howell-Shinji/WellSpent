@@ -251,8 +251,7 @@ struct ContentView: View {
                     .foregroundColor(Theme.textSecondary)
                 Spacer()
                 Button("撤销") {
-                    store.undoDeletion()
-                    showCompleted = true
+                    if store.undoDeletion() { showCompleted = true }
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(Theme.accent)
@@ -348,7 +347,7 @@ struct ContentView: View {
                     .tint(Theme.accent)
                     .accessibilityLabel("窗口透明度")
             }
-            Text("WellSpent · v2.1.0")
+            Text("WellSpent · v2.1.1")
                 .font(Theme.small())
                 .foregroundColor(Theme.textMuted)
         }
