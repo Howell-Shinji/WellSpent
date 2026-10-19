@@ -26,7 +26,16 @@ final class TodoStore: ObservableObject {
         }
     }
 
-    var activeItems: [Todo] { items.filter { !$0.completed } }
+    var activeItems: [Todo] {
+        items.enumerated()
+            .filter { !$0.element.completed }
+            .sorted {
+                let left = $0.element.priority.sortRank
+                let right = $1.element.priority.sortRank
+                return left == right ? $0.offset < $1.offset : left < right
+            }
+            .map { $0.element }
+    }
     var completedItems: [Todo] { items.filter(\.completed) }
     var undoneCount: Int { activeItems.count }
     var hasCompleted: Bool { items.contains(where: \.completed) }
@@ -69,6 +78,15 @@ final class TodoStore: ObservableObject {
         commitEditing()
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].completed.toggle()
+        changed()
+    }
+
+    func setPriority(_ priority: TodoPriority, for id: UUID) {
+        guard !isReadBlocked else { return }
+        commitEditing()
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].priority != priority else { return }
+        items[index].priority = priority
         changed()
     }
 

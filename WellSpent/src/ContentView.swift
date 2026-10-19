@@ -348,7 +348,7 @@ struct ContentView: View {
                     .tint(Theme.accent)
                     .accessibilityLabel("窗口透明度")
             }
-            Text("WellSpent · v2.0.1")
+            Text("WellSpent · v2.1.0")
                 .font(Theme.small())
                 .foregroundColor(Theme.textMuted)
         }

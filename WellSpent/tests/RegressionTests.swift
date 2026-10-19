@@ -83,6 +83,45 @@ struct RegressionTests {
         let reopened = TodoStore(directory: normal, defaults: defaults)
         expect(reopened.items[1].text == "退出前的修改", "last edit is durable without a run loop")
 
+        let priorityDirectory = directory("priority")
+        let priorityStore = TodoStore(directory: priorityDirectory, defaults: defaults)
+        for text in ["低", "高甲", "普通", "高乙"] { priorityStore.add(text) }
+        let priorityIDs = priorityStore.items.map(\.id)
+        expect(priorityStore.items.allSatisfy { $0.priority == .normal }, "new tasks default to normal priority")
+        priorityStore.setPriority(.low, for: priorityIDs[0])
+        priorityStore.setPriority(.high, for: priorityIDs[1])
+        priorityStore.setPriority(.high, for: priorityIDs[3])
+        expect(priorityStore.activeItems.map(\.text) == ["高甲", "高乙", "普通", "低"],
+               "active tasks sort by priority and preserve order within a level")
+        expect(try read(priorityDirectory).map(\.priority) == [.low, .high, .normal, .high],
+               "priority changes are immediately saved without changing storage order")
+        priorityStore.toggle(priorityIDs[1])
+        expect(priorityStore.activeItems.map(\.text) == ["高乙", "普通", "低"] &&
+               priorityStore.completedItems.map(\.text) == ["高甲"],
+               "completed tasks remain below active tasks")
+        priorityStore.toggle(priorityIDs[1])
+        expect(priorityStore.activeItems.first?.text == "高甲", "restored task keeps its priority")
+        priorityStore.delete(priorityIDs[3])
+        priorityStore.undoDeletion()
+        expect(priorityStore.items[3].priority == .high, "undo restores the deleted priority")
+        let priorityReopened = TodoStore(directory: priorityDirectory, defaults: defaults)
+        expect(priorityReopened.activeItems.map(\.text) == ["高甲", "高乙", "普通", "低"],
+               "priority survives relaunch")
+
+        let legacyDirectory = directory("legacy-priority")
+        try fm.createDirectory(at: legacyDirectory, withIntermediateDirectories: true)
+        let modernData = try JSONEncoder().encode(Todo(text: "旧任务", priority: .high))
+        var legacyObject = try JSONSerialization.jsonObject(with: modernData) as! [String: Any]
+        legacyObject.removeValue(forKey: "priority")
+        let legacyData = try JSONSerialization.data(withJSONObject: [legacyObject])
+        try legacyData.write(to: legacyDirectory.appendingPathComponent("todos.json"))
+        let legacyStore = TodoStore(directory: legacyDirectory, defaults: defaults)
+        expect(!legacyStore.isReadBlocked && legacyStore.items.first?.priority == .normal,
+               "existing data without priority loads as normal")
+        legacyStore.setPriority(.high, for: legacyStore.items[0].id)
+        expect(try read(legacyDirectory).first?.priority == .high,
+               "legacy data gains a persistent priority on change")
+
         let recovery = directory("recovery")
         let recoveryStore = TodoStore(directory: recovery, defaults: defaults)
         recoveryStore.add("备份中的任务")

@@ -27,6 +27,7 @@ enum TokyoNightTheme {
     static let accent = adaptive(light: 0x2959AA, dark: 0x7AA2F7)
     static let accentSoft = adaptive(light: 0xCBD5EE, dark: 0x3D59A1)
     static let success = adaptive(light: 0x385F0D, dark: 0x9ECE6A)
+    static let priorityHigh = adaptive(light: 0x8F4C14, dark: 0xE0AF68)
     static let danger = adaptive(light: 0x8C4351, dark: 0xF7768E)
     static let onAccent = adaptive(light: 0xF7F7FA, dark: 0x1A1B26)
     static let onSuccess = adaptive(light: 0xF7F7FA, dark: 0x1A1B26)

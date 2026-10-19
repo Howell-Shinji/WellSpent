@@ -80,6 +80,32 @@ struct TodoRow: View {
                 }
                 .padding(.top, 3)
 
+                Menu {
+                    ForEach(TodoPriority.allCases, id: \.self) { priority in
+                        Button {
+                            store.setPriority(priority, for: todo.id)
+                        } label: {
+                            Label(priority.title,
+                                  systemImage: todo.priority == priority ? "checkmark.circle.fill" : "circle")
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: todo.priority == .high ? "flag.fill" : "flag")
+                        if todo.priority != .normal {
+                            Text(todo.priority.shortTitle)
+                        }
+                    }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(todo.priority == .high ? Theme.priorityHigh : Theme.textMuted)
+                    .frame(width: 38, height: 28)
+                    .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .tint(todo.priority == .high ? Theme.priorityHigh : Theme.textMuted)
+                .help("优先级：\(todo.priority.title)")
+                .accessibilityLabel("设置\(todo.text)的优先级，当前\(todo.priority.title)")
+
                 Button { store.delete(todo.id) } label: {
                     Image(systemName: "trash")
                         .font(.system(size: 12.5, weight: .medium))
