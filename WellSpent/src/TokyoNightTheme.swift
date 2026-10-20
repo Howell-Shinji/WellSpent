@@ -13,7 +13,6 @@ enum TokyoNightTheme {
 
     // Tokyo Night / Tokyo Night Light color roles.
     static let background = adaptive(light: 0xE6E7ED, dark: 0x1A1B26)
-    static let chrome = adaptive(light: 0xDADCE5, dark: 0x16161E)
     static let surface = adaptive(light: 0xF1F2F6, dark: 0x24283B)
     static let surfaceElevated = adaptive(light: 0xFAFAFC, dark: 0x292E42)
     static let border = adaptive(light: 0xC4C8D8, dark: 0x3B4261)
@@ -28,6 +27,7 @@ enum TokyoNightTheme {
     static let accentSoft = adaptive(light: 0xCBD5EE, dark: 0x3D59A1)
     static let success = adaptive(light: 0x385F0D, dark: 0x9ECE6A)
     static let priorityHigh = adaptive(light: 0x8F4C14, dark: 0xE0AF68)
+    static let priorityLow = adaptive(light: 0x496D83, dark: 0x73A4B8)
     static let danger = adaptive(light: 0x8C4351, dark: 0xF7768E)
     static let onAccent = adaptive(light: 0xF7F7FA, dark: 0x1A1B26)
     static let onSuccess = adaptive(light: 0xF7F7FA, dark: 0x1A1B26)

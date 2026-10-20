@@ -20,14 +20,6 @@ enum TodoPriority: String, CaseIterable, Codable {
         case .low: return "低优先级"
         }
     }
-
-    var shortTitle: String {
-        switch self {
-        case .high: return "高"
-        case .normal: return "普通"
-        case .low: return "低"
-        }
-    }
 }
 
 struct Todo: Identifiable, Codable, Equatable {
@@ -57,14 +49,5 @@ struct Todo: Identifiable, Codable, Equatable {
         completed = try values.decode(Bool.self, forKey: .completed)
         priority = try values.decodeIfPresent(TodoPriority.self, forKey: .priority) ?? .normal
         createdAt = try values.decode(Date.self, forKey: .createdAt)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var values = encoder.container(keyedBy: CodingKeys.self)
-        try values.encode(id, forKey: .id)
-        try values.encode(text, forKey: .text)
-        try values.encode(completed, forKey: .completed)
-        try values.encode(priority, forKey: .priority)
-        try values.encode(createdAt, forKey: .createdAt)
     }
 }

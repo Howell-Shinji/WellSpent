@@ -11,6 +11,13 @@ struct TodoRow: View {
 
     private var isEditing: Bool { store.editingID == todo.id }
     private var textFont: Font { todo.completed ? Theme.body() : Theme.bodyStrong() }
+    private var priorityColor: Color {
+        switch todo.priority {
+        case .high: return Theme.priorityHigh
+        case .normal: return Theme.textMuted
+        case .low: return Theme.priorityLow
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
@@ -90,19 +97,16 @@ struct TodoRow: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 2) {
-                        Image(systemName: todo.priority == .high ? "flag.fill" : "flag")
-                        if todo.priority != .normal {
-                            Text(todo.priority.shortTitle)
-                        }
-                    }
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(todo.priority == .high ? Theme.priorityHigh : Theme.textMuted)
-                    .frame(width: 38, height: 28)
-                    .contentShape(Rectangle())
+                    Image(systemName: todo.priority == .high ? "flag.fill" : "flag")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundColor(priorityColor)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
                 }
                 .menuStyle(.borderlessButton)
-                .tint(todo.priority == .high ? Theme.priorityHigh : Theme.textMuted)
+                .menuIndicator(.hidden)
+                .tint(priorityColor)
+                .frame(width: 28, height: 28)
                 .help("优先级：\(todo.priority.title)")
                 .accessibilityLabel("设置\(todo.text)的优先级，当前\(todo.priority.title)")
 
