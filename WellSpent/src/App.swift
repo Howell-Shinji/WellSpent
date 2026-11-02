@@ -13,7 +13,6 @@ struct WellSpentApp: App {
                 .preferredColorScheme(Theme.colorScheme(for: store.appearanceMode))
                 .frame(minWidth: 320, minHeight: 460)
                 .onAppear { appDelegate.configureWindow(store: store) }
-                .onChange(of: store.windowAlpha) { _ in appDelegate.updateWindow() }
                 .onChange(of: store.appearanceMode) { _ in appDelegate.updateWindow() }
                 .onChange(of: store.alwaysOnTop) { _ in appDelegate.updateWindow() }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
@@ -52,6 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.delegate = self
             window.isOpaque = false
             window.backgroundColor = .clear
+            window.titlebarAppearsTransparent = true
             window.hasShadow = true
             window.isMovableByWindowBackground = true
             window.minSize = NSSize(width: 320, height: 460)
@@ -80,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func updateWindow() {
         guard let window = mainWindow, let store else { return }
-        window.alphaValue = CGFloat(store.windowAlpha)
+        window.alphaValue = 1
         window.appearance = Theme.nsAppearance(for: store.appearanceMode)
         window.level = store.alwaysOnTop ? .floating : .normal
         window.collectionBehavior = store.alwaysOnTop ? [.canJoinAllSpaces, .fullScreenAuxiliary] : []

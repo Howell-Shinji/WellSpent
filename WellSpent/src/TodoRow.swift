@@ -2,15 +2,18 @@ import SwiftUI
 
 struct TodoRow: View {
     @EnvironmentObject var store: TodoStore
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     let todo: Todo
     @State private var isHovered = false
     @State private var isExpanded = false
     @State private var fullTextHeight: CGFloat = 0
     @State private var visibleTextHeight: CGFloat = 0
     @FocusState private var editFocused: Bool
+    @FocusState private var deleteFocused: Bool
 
     private var isEditing: Bool { store.editingID == todo.id }
     private var textFont: Font { todo.completed ? Theme.body() : Theme.bodyStrong() }
+    private var showsDelete: Bool { isHovered || isEditing || deleteFocused || voiceOverEnabled }
     private var priorityColor: Color {
         switch todo.priority {
         case .high: return Theme.priorityHigh
@@ -118,6 +121,9 @@ struct TodoRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .focused($deleteFocused)
+                .opacity(showsDelete ? 1 : 0)
+                .allowsHitTesting(showsDelete)
                 .help("删除，可撤销")
                 .accessibilityLabel("删除 \(todo.text)")
             }
@@ -137,11 +143,11 @@ struct TodoRow: View {
         }
         .padding(.horizontal, Theme.spacingM)
         .padding(.vertical, Theme.spacingS)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusM).fill(Theme.surface))
+        .background(RoundedRectangle(cornerRadius: Theme.radiusM).fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity))))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusM)
                 .stroke(isEditing || isHovered ? Theme.accent.opacity(isEditing ? 0.85 : 0.46)
-                        : Theme.border.opacity(0.72), lineWidth: Theme.hairline)
+                        : Theme.border.opacity(0.25), lineWidth: Theme.hairline)
         )
         .onHover { isHovered = $0 }
         .onChange(of: editFocused) { focused in

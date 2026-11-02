@@ -5,7 +5,7 @@ typealias Theme = TokyoNightTheme
 
 enum TokyoNightTheme {
     static let supportsAppearanceSelection = true
-    static let defaultAlpha = 0.95
+    static let defaultBackgroundOpacity = 0.95
     static let windowFrameKey = "windowFrame.TokyoNight"
     static let buttonFill = accent
     static func colorScheme(for mode: AppearanceMode) -> ColorScheme? { mode.colorScheme }
@@ -90,7 +90,7 @@ enum TokyoNightTheme {
 struct ThemeDivider: View {
     var body: some View {
         Rectangle()
-            .fill(TokyoNightTheme.border.opacity(0.72))
+            .fill(TokyoNightTheme.border.opacity(0.25))
             .frame(height: TokyoNightTheme.hairline)
     }
 }

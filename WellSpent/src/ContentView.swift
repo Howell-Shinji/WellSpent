@@ -3,14 +3,28 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var store: TodoStore
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var newTodoText = ""
     @State private var showSettings = false
+    @State private var isHovered = false
     @AppStorage("showCompleted") private var showCompleted = false
     @FocusState private var inputFocused: Bool
+    @FocusState private var settingsFocused: Bool
+    @FocusState private var clearFocused: Bool
+
+    private var showsSettings: Bool { isHovered || showSettings || settingsFocused || voiceOverEnabled }
 
     var body: some View {
         ZStack {
+            if !reduceTransparency {
+                FrostedBackground(opacity: store.backgroundOpacity)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
             Theme.background
+                .opacity(reduceTransparency ? 1 : store.backgroundOpacity)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
                 .ignoresSafeArea()
                 .onTapGesture {
                     NSApp.keyWindow?.makeFirstResponder(nil)
@@ -38,15 +52,14 @@ struct ContentView: View {
                 footer
                     .padding(.horizontal, Theme.spacingL)
                     .padding(.vertical, Theme.spacingM)
-
-
             }
         }
         .tint(Theme.accent)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous)
-                .stroke(Theme.border.opacity(0.65), lineWidth: Theme.hairline)
+                .stroke(Theme.border.opacity(0.25), lineWidth: Theme.hairline)
         )
+        .onHover { isHovered = $0 }
     }
 
     private var header: some View {
@@ -70,11 +83,11 @@ struct ContentView: View {
                 .padding(.vertical, 5)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Theme.surface)
+                        .fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .stroke(Theme.border.opacity(0.72), lineWidth: 1)
+                        .stroke(Theme.border.opacity(0.35), lineWidth: 1)
                 )
                 .accessibilityLabel("\(store.undoneCount) 项未完成，共 \(store.items.count) 项")
 
@@ -88,20 +101,23 @@ struct ContentView: View {
                     .frame(width: 30, height: 30)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous)
-                            .fill(showSettings ? Theme.accentSoft.opacity(0.55) : Theme.surface)
+                            .fill(showSettings ? Theme.accentSoft.opacity(0.55) : Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous)
                             .stroke(
                                 showSettings
                                     ? Theme.accent.opacity(0.65)
-                                    : Theme.border.opacity(0.72),
+                                    : Theme.border.opacity(0.35),
                                 lineWidth: 1
                             )
                     )
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .focused($settingsFocused)
+            .opacity(showsSettings ? 1 : 0)
+            .allowsHitTesting(showsSettings)
             .help(showSettings ? "收起设置" : "打开设置")
             .accessibilityLabel(showSettings ? "收起设置" : "打开设置")
             .popover(isPresented: $showSettings, arrowEdge: .bottom) {
@@ -162,11 +178,11 @@ struct ContentView: View {
         .padding(.vertical, Theme.spacingXS)
         .background(
             RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
-                .fill(Theme.surface)
+                .fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
-                .stroke(Theme.border.opacity(0.82), lineWidth: 1)
+                .stroke(Theme.border.opacity(0.35), lineWidth: 1)
         )
     }
 
@@ -217,6 +233,9 @@ struct ContentView: View {
                                 Spacer()
                                 Button("清除") { store.clearCompleted() }
                                     .buttonStyle(.plain)
+                                    .focused($clearFocused)
+                                    .opacity(isHovered || clearFocused || voiceOverEnabled ? 1 : 0)
+                                    .allowsHitTesting(isHovered || clearFocused || voiceOverEnabled)
                                     .font(Theme.small())
                                     .foregroundColor(Theme.danger)
                                     .help("清除已完成待办，可撤销")
@@ -332,22 +351,27 @@ struct ContentView: View {
 
             VStack(alignment: .leading, spacing: Theme.spacingS) {
                 HStack {
-                    Text("窗口透明度")
+                    Text("背景不透明度")
                         .font(Theme.small())
                         .foregroundColor(Theme.textSecondary)
 
                     Spacer()
 
-                    Text(String(format: "%.0f%%", store.windowAlpha * 100))
+                    Text(String(format: "%.0f%%", store.backgroundOpacity * 100))
                         .font(Theme.counter())
                         .foregroundColor(Theme.textMuted)
                 }
 
-                Slider(value: $store.windowAlpha, in: 0.3...1.0)
+                Slider(value: $store.backgroundOpacity, in: 0.3...1.0)
                     .tint(Theme.accent)
-                    .accessibilityLabel("窗口透明度")
+                    .accessibilityLabel("背景不透明度")
+                    .disabled(reduceTransparency)
+                Text(reduceTransparency ? "系统已开启减少透明度，背景保持不透明。" : "只调整背景，文字与任务标记始终清晰。")
+                    .font(Theme.small())
+                    .foregroundColor(Theme.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text("WellSpent · v2.1.2")
+            Text("WellSpent · v2.1.3")
                 .font(Theme.small())
                 .foregroundColor(Theme.textMuted)
         }

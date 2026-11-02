@@ -179,7 +179,14 @@ struct RegressionTests {
         defaults.set(false, forKey: "alwaysOnTop")
         defaults.set(0.72, forKey: "windowAlpha")
         let preferences = TodoStore(directory: directory("prefs"), defaults: defaults)
-        expect(!preferences.alwaysOnTop && preferences.windowAlpha == 0.72, "window preferences survive relaunch")
+        expect(!preferences.alwaysOnTop && preferences.backgroundOpacity == 0.72,
+               "legacy transparency setting becomes background opacity")
+        preferences.backgroundOpacity = 0.45
+        let opacityReopened = TodoStore(directory: directory("opacity-prefs"), defaults: defaults)
+        expect(opacityReopened.backgroundOpacity == 0.45, "background opacity survives relaunch")
+        defaults.set(0.05, forKey: "windowAlpha")
+        let faint = TodoStore(directory: directory("opacity-minimum"), defaults: defaults)
+        expect(faint.backgroundOpacity == 0.3, "background opacity keeps its readable lower bound")
         if !Theme.supportsAppearanceSelection {
             defaults.set("dark", forKey: "appearanceMode")
             let fixed = TodoStore(directory: directory("fixed"), defaults: defaults)
