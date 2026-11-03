@@ -3,63 +3,184 @@ import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var store: TodoStore
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     @State private var newTodoText = ""
     @State private var showSettings = false
-    @State private var isHovered = false
+    @State private var showQuickAdd = false
     @AppStorage("showCompleted") private var showCompleted = false
     @FocusState private var inputFocused: Bool
-    @FocusState private var settingsFocused: Bool
-    @FocusState private var clearFocused: Bool
-
-    private var showsSettings: Bool { isHovered || showSettings || settingsFocused || voiceOverEnabled }
 
     var body: some View {
         ZStack {
-            if !reduceTransparency {
-                FrostedBackground(opacity: store.backgroundOpacity)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-            }
             Theme.background
-                .opacity(reduceTransparency ? 1 : store.backgroundOpacity)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
                 .ignoresSafeArea()
                 .onTapGesture {
                     NSApp.keyWindow?.makeFirstResponder(nil)
                     store.commitEditing()
                 }
 
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, Theme.spacingL)
-                    .padding(.top, Theme.spacingL)
-                    .padding(.bottom, Theme.spacingM)
+            if store.compactMode {
+                compactView
+            } else {
+                VStack(spacing: 0) {
+                    header
+                        .padding(.horizontal, Theme.spacingL)
+                        .padding(.top, Theme.spacingL)
+                        .padding(.bottom, Theme.spacingM)
 
-                ThemeDivider()
+                    ThemeDivider()
 
-                inputBar
-                    .padding(.horizontal, Theme.spacingL)
-                    .padding(.vertical, Theme.spacingM)
+                    inputBar
+                        .padding(.horizontal, Theme.spacingL)
+                        .padding(.vertical, Theme.spacingM)
 
-                todoList
-                storageStatus
-                undoBanner
+                    todoList
+                    storageStatus
+                    undoBanner
 
-                ThemeDivider()
+                    ThemeDivider()
 
-                footer
-                    .padding(.horizontal, Theme.spacingL)
-                    .padding(.vertical, Theme.spacingM)
+                    footer
+                        .padding(.horizontal, Theme.spacingL)
+                        .padding(.vertical, Theme.spacingM)
+                }
             }
+        }
+        .onChange(of: store.compactMode) { _ in
+            showQuickAdd = false
+            showSettings = false
         }
         .tint(Theme.accent)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous)
-                .stroke(Theme.border.opacity(0.25), lineWidth: Theme.hairline)
+                .stroke(Theme.border.opacity(0.65), lineWidth: Theme.hairline)
         )
-        .onHover { isHovered = $0 }
+    }
+
+    private var viewModeButton: some View {
+        Button {
+            store.commitEditing()
+            store.compactMode.toggle()
+        } label: {
+            Image(systemName: store.compactMode ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 24, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(Theme.textSecondary)
+        .help(store.compactMode ? "展开完整列表" : "收起为紧凑视图")
+        .accessibilityLabel(store.compactMode ? "展开完整列表" : "收起为紧凑视图")
+    }
+
+    private var compactView: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                Text("WellSpent")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundColor(Theme.textSecondary)
+                Text("· \(store.undoneCount)")
+                    .font(Theme.counter())
+                    .foregroundColor(Theme.textMuted)
+                    .accessibilityLabel("剩余 \(store.undoneCount) 项")
+                Spacer(minLength: 4)
+                Button { showQuickAdd.toggle() } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(width: 24, height: 26)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(Theme.accent)
+                .disabled(store.isReadBlocked)
+                .help("添加待办")
+                .accessibilityLabel("添加待办")
+                .popover(isPresented: $showQuickAdd, arrowEdge: .bottom) {
+                    inputBar
+                        .padding(12)
+                        .frame(width: 300)
+                        .background(Theme.background)
+                        .preferredColorScheme(Theme.colorScheme(for: store.appearanceMode))
+                        .onAppear { inputFocused = true }
+                }
+                Button { showSettings.toggle() } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(width: 24, height: 26)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(Theme.textMuted)
+                .help("打开设置")
+                .accessibilityLabel("打开设置")
+                .popover(isPresented: $showSettings, arrowEdge: .bottom) {
+                    settingsPanel
+                        .padding(Theme.spacingL)
+                        .frame(width: 280)
+                        .background(Theme.background)
+                        .preferredColorScheme(Theme.colorScheme(for: store.appearanceMode))
+                }
+                viewModeButton
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+
+            ScrollView {
+                VStack(spacing: 3) {
+                    storageStatus
+                    undoBanner
+                    if store.isReadBlocked {
+                        EmptyView()
+                    } else if store.compactItems.isEmpty {
+                        Text(store.items.isEmpty ? "点 + 记下一件事" : "都完成了，休息一下")
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: 80)
+                    } else {
+                        ForEach(store.compactItems) { todo in
+                            HStack(spacing: 6) {
+                                CompletionToggle(checked: false) { store.toggle(todo.id) }
+                                Text(todo.text)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(Theme.textPrimary)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                                    .help(todo.text)
+                                    .onTapGesture(count: 2) { editFromCompact(todo) }
+                                    .accessibilityAction(named: "编辑") { editFromCompact(todo) }
+                                PriorityMenu(todo: todo)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .contextMenu {
+                                Button("编辑") { editFromCompact(todo) }
+                                Button("删除") { store.delete(todo.id) }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Button {
+                store.compactMode = false
+            } label: {
+                Text(store.undoneCount > 3 ? "另有 \(store.undoneCount - 3) 项 · 查看全部" : "查看完整列表")
+                    .font(.system(size: 11.5))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(Theme.textMuted)
+            .padding(.horizontal, 14)
+            .padding(.top, 4)
+            .padding(.bottom, 9)
+        }
+    }
+
+    private func editFromCompact(_ todo: Todo) {
+        store.compactMode = false
+        store.beginEditing(todo.id)
     }
 
     private var header: some View {
@@ -83,13 +204,15 @@ struct ContentView: View {
                 .padding(.vertical, 5)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
+                        .fill(Theme.surface)
                 )
                 .overlay(
                     Capsule(style: .continuous)
-                        .stroke(Theme.border.opacity(0.35), lineWidth: 1)
+                        .stroke(Theme.border.opacity(0.72), lineWidth: 1)
                 )
                 .accessibilityLabel("\(store.undoneCount) 项未完成，共 \(store.items.count) 项")
+
+            viewModeButton
 
             Button(action: {
                 store.commitEditing()
@@ -101,23 +224,20 @@ struct ContentView: View {
                     .frame(width: 30, height: 30)
                     .background(
                         RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous)
-                            .fill(showSettings ? Theme.accentSoft.opacity(0.55) : Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
+                            .fill(showSettings ? Theme.accentSoft.opacity(0.55) : Theme.surface)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous)
                             .stroke(
                                 showSettings
                                     ? Theme.accent.opacity(0.65)
-                                    : Theme.border.opacity(0.35),
+                                    : Theme.border.opacity(0.72),
                                 lineWidth: 1
                             )
                     )
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .focused($settingsFocused)
-            .opacity(showsSettings ? 1 : 0)
-            .allowsHitTesting(showsSettings)
             .help(showSettings ? "收起设置" : "打开设置")
             .accessibilityLabel(showSettings ? "收起设置" : "打开设置")
             .popover(isPresented: $showSettings, arrowEdge: .bottom) {
@@ -178,11 +298,11 @@ struct ContentView: View {
         .padding(.vertical, Theme.spacingXS)
         .background(
             RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
-                .fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity)))
+                .fill(Theme.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
-                .stroke(Theme.border.opacity(0.35), lineWidth: 1)
+                .stroke(Theme.border.opacity(0.82), lineWidth: 1)
         )
     }
 
@@ -233,9 +353,6 @@ struct ContentView: View {
                                 Spacer()
                                 Button("清除") { store.clearCompleted() }
                                     .buttonStyle(.plain)
-                                    .focused($clearFocused)
-                                    .opacity(isHovered || clearFocused || voiceOverEnabled ? 1 : 0)
-                                    .allowsHitTesting(isHovered || clearFocused || voiceOverEnabled)
                                     .font(Theme.small())
                                     .foregroundColor(Theme.danger)
                                     .help("清除已完成待办，可撤销")
@@ -349,29 +466,26 @@ struct ContentView: View {
             }
             }
 
-            VStack(alignment: .leading, spacing: Theme.spacingS) {
-                HStack {
-                    Text("背景不透明度")
-                        .font(Theme.small())
-                        .foregroundColor(Theme.textSecondary)
+            if !store.compactMode {
+                VStack(alignment: .leading, spacing: Theme.spacingS) {
+                    HStack {
+                        Text("窗口透明度")
+                            .font(Theme.small())
+                            .foregroundColor(Theme.textSecondary)
 
-                    Spacer()
+                        Spacer()
 
-                    Text(String(format: "%.0f%%", store.backgroundOpacity * 100))
-                        .font(Theme.counter())
-                        .foregroundColor(Theme.textMuted)
+                        Text(String(format: "%.0f%%", store.windowAlpha * 100))
+                            .font(Theme.counter())
+                            .foregroundColor(Theme.textMuted)
+                    }
+
+                    Slider(value: $store.windowAlpha, in: 0.3...1.0)
+                        .tint(Theme.accent)
+                        .accessibilityLabel("窗口透明度")
                 }
-
-                Slider(value: $store.backgroundOpacity, in: 0.3...1.0)
-                    .tint(Theme.accent)
-                    .accessibilityLabel("背景不透明度")
-                    .disabled(reduceTransparency)
-                Text(reduceTransparency ? "系统已开启减少透明度，背景保持不透明。" : "只调整背景，文字与任务标记始终清晰。")
-                    .font(Theme.small())
-                    .foregroundColor(Theme.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text("WellSpent · v2.1.3")
+            Text("WellSpent · v2.2.0")
                 .font(Theme.small())
                 .foregroundColor(Theme.textMuted)
         }

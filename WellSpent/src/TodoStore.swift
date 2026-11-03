@@ -12,9 +12,11 @@ final class TodoStore: ObservableObject {
     @Published private(set) var editingID: UUID?
     @Published var editDraft = ""
 
-    @Published var backgroundOpacity: Double {
-        // Keep the old preference key so existing transparency settings survive.
-        didSet { defaults.set(backgroundOpacity, forKey: "windowAlpha") }
+    @Published var compactMode: Bool {
+        didSet { defaults.set(compactMode, forKey: "compactMode") }
+    }
+    @Published var windowAlpha: Double {
+        didSet { defaults.set(windowAlpha, forKey: "windowAlpha") }
     }
     @Published var alwaysOnTop: Bool {
         didSet { defaults.set(alwaysOnTop, forKey: "alwaysOnTop") }
@@ -37,6 +39,7 @@ final class TodoStore: ObservableObject {
             }
             .map { $0.element }
     }
+    var compactItems: [Todo] { Array(activeItems.prefix(3)) }
     var completedItems: [Todo] { items.filter(\.completed) }
     var undoneCount: Int { activeItems.count }
     var hasCompleted: Bool { items.contains(where: \.completed) }
@@ -56,8 +59,9 @@ final class TodoStore: ObservableObject {
                                                          in: .userDomainMask)[0]
             .appendingPathComponent("WellSpent", isDirectory: true)
         repository = TodoRepository(directory: root)
-        let alpha = defaults.object(forKey: "windowAlpha") as? Double ?? Theme.defaultBackgroundOpacity
-        backgroundOpacity = alpha.isFinite ? min(1, max(0.3, alpha)) : Theme.defaultBackgroundOpacity
+        compactMode = defaults.object(forKey: "compactMode") as? Bool ?? true
+        let alpha = defaults.object(forKey: "windowAlpha") as? Double ?? Theme.defaultAlpha
+        windowAlpha = alpha.isFinite ? min(1, max(0.3, alpha)) : Theme.defaultAlpha
         alwaysOnTop = defaults.object(forKey: "alwaysOnTop") as? Bool ?? true
         appearanceMode = Theme.supportsAppearanceSelection
             ? AppearanceMode(rawValue: defaults.string(forKey: "appearanceMode") ?? "") ?? .system

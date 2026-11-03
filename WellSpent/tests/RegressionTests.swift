@@ -179,19 +179,42 @@ struct RegressionTests {
         defaults.set(false, forKey: "alwaysOnTop")
         defaults.set(0.72, forKey: "windowAlpha")
         let preferences = TodoStore(directory: directory("prefs"), defaults: defaults)
-        expect(!preferences.alwaysOnTop && preferences.backgroundOpacity == 0.72,
-               "legacy transparency setting becomes background opacity")
-        preferences.backgroundOpacity = 0.45
+        expect(!preferences.alwaysOnTop && preferences.windowAlpha == 0.72,
+               "legacy window transparency setting remains available")
+        preferences.windowAlpha = 0.45
         let opacityReopened = TodoStore(directory: directory("opacity-prefs"), defaults: defaults)
-        expect(opacityReopened.backgroundOpacity == 0.45, "background opacity survives relaunch")
+        expect(opacityReopened.windowAlpha == 0.45, "window opacity survives relaunch")
         defaults.set(0.05, forKey: "windowAlpha")
         let faint = TodoStore(directory: directory("opacity-minimum"), defaults: defaults)
-        expect(faint.backgroundOpacity == 0.3, "background opacity keeps its readable lower bound")
+        expect(faint.windowAlpha == 0.3, "window opacity keeps its readable lower bound")
         if !Theme.supportsAppearanceSelection {
             defaults.set("dark", forKey: "appearanceMode")
             let fixed = TodoStore(directory: directory("fixed"), defaults: defaults)
             expect(fixed.appearanceMode == .light, "Lavender ignores saved dark mode")
         }
+
+        let compact = TodoStore(directory: directory("compact"), defaults: defaults)
+        expect(compact.compactMode, "compact view is the default")
+        for title in ["one", "two", "three", "four", "five"] { compact.add(title) }
+        let promoted = compact.items[4].id
+        compact.setPriority(.high, for: promoted)
+        expect(compact.compactItems.map(\.text) == ["five", "one", "two"],
+               "compact view shows three pending tasks in priority order")
+        compact.toggle(promoted)
+        expect(compact.compactItems.map(\.text) == ["one", "two", "three"],
+               "completing a compact task fills the vacant slot")
+        compact.compactMode = false
+        let regularReopened = TodoStore(directory: directory("compact"), defaults: defaults)
+        expect(!regularReopened.compactMode, "expanded view choice survives relaunch")
+        expect(regularReopened.items.count == 5 && regularReopened.completedItems.count == 1,
+               "view mode does not discard hidden or completed tasks")
+        compact.compactMode = true
+        let compactReopened = TodoStore(directory: directory("compact"), defaults: defaults)
+        expect(compactReopened.compactMode, "compact view choice survives relaunch")
+        let small = NSRect(x: 20, y: 20, width: 300, height: 210)
+        expect(WindowGeometry.fitted(small, screens: [NSRect(x: 0, y: 0, width: 1440, height: 900)],
+                                    minimumSize: WindowGeometry.minimumContentSize(compact: true)) == small,
+               "compact geometry remains smaller than the full view minimum")
 
         let primary = NSRect(x: 0, y: 0, width: 1440, height: 900)
         let external = NSRect(x: 1440, y: 0, width: 1920, height: 1080)

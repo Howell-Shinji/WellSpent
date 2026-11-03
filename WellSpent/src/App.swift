@@ -11,8 +11,11 @@ struct WellSpentApp: App {
             ContentView()
                 .environmentObject(store)
                 .preferredColorScheme(Theme.colorScheme(for: store.appearanceMode))
-                .frame(minWidth: 320, minHeight: 460)
+                .frame(minWidth: WindowGeometry.minimumContentSize(compact: store.compactMode).width,
+                       minHeight: WindowGeometry.minimumContentSize(compact: store.compactMode).height)
                 .onAppear { appDelegate.configureWindow(store: store) }
+                .onChange(of: store.compactMode) { _ in appDelegate.updateWindow() }
+                .onChange(of: store.windowAlpha) { _ in appDelegate.updateWindow() }
                 .onChange(of: store.appearanceMode) { _ in appDelegate.updateWindow() }
                 .onChange(of: store.alwaysOnTop) { _ in appDelegate.updateWindow() }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
@@ -29,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private weak var mainWindow: NSWindow?
     private weak var store: TodoStore?
     private var restoringFrame = false
+    private var displayedCompactMode: Bool?
     private var discardOnExit = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -51,39 +55,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.delegate = self
             window.isOpaque = false
             window.backgroundColor = .clear
-            window.titlebarAppearsTransparent = true
             window.hasShadow = true
             window.isMovableByWindowBackground = true
-            window.minSize = NSSize(width: 320, height: 460)
             window.contentView?.wantsLayer = true
             window.contentView?.layer?.backgroundColor = NSColor.clear.cgColor
             self.updateWindow()
-
-            self.restoringFrame = true
-            if let saved = UserDefaults.standard.string(forKey: Theme.windowFrameKey),
-               WindowGeometry.isValid(NSRectFromString(saved)) {
-                window.setFrame(WindowGeometry.fitted(NSRectFromString(saved), screens: self.visibleScreens),
-                                display: true)
-            } else {
-                window.setContentSize(NSSize(width: 380, height: 520))
-                if let screen = self.visibleScreens.first {
-                    var frame = window.frame
-                    frame.origin = NSPoint(x: screen.maxX - frame.width - 40,
-                                           y: screen.maxY - frame.height - 40)
-                    window.setFrame(WindowGeometry.fitted(frame, screens: self.visibleScreens), display: true)
-                }
-            }
-            self.restoringFrame = false
-            self.saveFrame()
         }
     }
 
     func updateWindow() {
         guard let window = mainWindow, let store else { return }
-        window.alphaValue = 1
+        window.alphaValue = store.compactMode ? 1 : CGFloat(store.windowAlpha)
         window.appearance = Theme.nsAppearance(for: store.appearanceMode)
         window.level = store.alwaysOnTop ? .floating : .normal
         window.collectionBehavior = store.alwaysOnTop ? [.canJoinAllSpaces, .fullScreenAuxiliary] : []
+        if displayedCompactMode != store.compactMode {
+            restoreFrame(compact: store.compactMode)
+        }
+    }
+
+    private func restoreFrame(compact: Bool) {
+        guard let window = mainWindow else { return }
+        let previousFrame = window.frame
+        let switchingMode = displayedCompactMode != nil
+        restoringFrame = true
+        displayedCompactMode = compact
+        window.contentMinSize = WindowGeometry.minimumContentSize(compact: compact)
+        let key = Theme.windowFrameKey + (compact ? ".Compact" : "")
+        let proposed: NSRect
+        if let saved = UserDefaults.standard.string(forKey: key),
+           WindowGeometry.isValid(NSRectFromString(saved)) {
+            proposed = NSRectFromString(saved)
+        } else {
+            var frame = window.frameRect(forContentRect: NSRect(origin: .zero,
+                size: WindowGeometry.defaultContentSize(compact: compact)))
+            if switchingMode {
+                frame.origin = NSPoint(x: previousFrame.minX, y: previousFrame.maxY - frame.height)
+            } else if let screen = visibleScreens.first {
+                frame.origin = NSPoint(x: screen.maxX - frame.width - 40, y: screen.maxY - frame.height - 40)
+            }
+            proposed = frame
+        }
+        window.setFrame(fittedFrame(proposed), display: true)
+        restoringFrame = false
+        saveFrame()
+    }
+
+    private func fittedFrame(_ proposed: NSRect) -> NSRect {
+        guard let window = mainWindow, let store else { return proposed }
+        let minimum = window.frameRect(forContentRect: NSRect(origin: .zero,
+            size: WindowGeometry.minimumContentSize(compact: store.compactMode))).size
+        return WindowGeometry.fitted(proposed, screens: visibleScreens, minimumSize: minimum)
     }
 
     private var visibleScreens: [NSRect] { NSScreen.screens.map(\.visibleFrame) }
@@ -92,13 +114,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func windowDidResize(_ notification: Notification) { saveFrame() }
 
     private func saveFrame() {
-        guard !restoringFrame, let window = mainWindow, WindowGeometry.isValid(window.frame) else { return }
-        UserDefaults.standard.set(NSStringFromRect(window.frame), forKey: Theme.windowFrameKey)
+        guard !restoringFrame, let window = mainWindow, let store,
+              displayedCompactMode == store.compactMode, WindowGeometry.isValid(window.frame) else { return }
+        let key = Theme.windowFrameKey + (store.compactMode ? ".Compact" : "")
+        UserDefaults.standard.set(NSStringFromRect(window.frame), forKey: key)
     }
 
     @objc private func screensChanged() {
         guard let window = mainWindow else { return }
-        window.setFrame(WindowGeometry.fitted(window.frame, screens: visibleScreens), display: true)
+        window.setFrame(fittedFrame(window.frame), display: true)
         saveFrame()
     }
 

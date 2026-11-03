@@ -2,25 +2,15 @@ import SwiftUI
 
 struct TodoRow: View {
     @EnvironmentObject var store: TodoStore
-    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     let todo: Todo
     @State private var isHovered = false
     @State private var isExpanded = false
     @State private var fullTextHeight: CGFloat = 0
     @State private var visibleTextHeight: CGFloat = 0
     @FocusState private var editFocused: Bool
-    @FocusState private var deleteFocused: Bool
 
     private var isEditing: Bool { store.editingID == todo.id }
     private var textFont: Font { todo.completed ? Theme.body() : Theme.bodyStrong() }
-    private var showsDelete: Bool { isHovered || isEditing || deleteFocused || voiceOverEnabled }
-    private var priorityColor: Color {
-        switch todo.priority {
-        case .high: return Theme.priorityHigh
-        case .normal: return Theme.textMuted
-        case .low: return Theme.priorityLow
-        }
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.spacingS) {
@@ -90,28 +80,7 @@ struct TodoRow: View {
                 }
                 .padding(.top, 3)
 
-                Menu {
-                    ForEach(TodoPriority.allCases, id: \.self) { priority in
-                        Button {
-                            store.setPriority(priority, for: todo.id)
-                        } label: {
-                            Label(priority.title,
-                                  systemImage: todo.priority == priority ? "checkmark.circle.fill" : "circle")
-                        }
-                    }
-                } label: {
-                    Image(systemName: todo.priority == .high ? "flag.fill" : "flag")
-                        .font(.system(size: 12.5, weight: .medium))
-                        .foregroundColor(priorityColor)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .tint(priorityColor)
-                .frame(width: 28, height: 28)
-                .help("优先级：\(todo.priority.title)")
-                .accessibilityLabel("设置\(todo.text)的优先级，当前\(todo.priority.title)")
+                PriorityMenu(todo: todo)
 
                 Button { store.delete(todo.id) } label: {
                     Image(systemName: "trash")
@@ -121,9 +90,6 @@ struct TodoRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .focused($deleteFocused)
-                .opacity(showsDelete ? 1 : 0)
-                .allowsHitTesting(showsDelete)
                 .help("删除，可撤销")
                 .accessibilityLabel("删除 \(todo.text)")
             }
@@ -143,11 +109,11 @@ struct TodoRow: View {
         }
         .padding(.horizontal, Theme.spacingM)
         .padding(.vertical, Theme.spacingS)
-        .background(RoundedRectangle(cornerRadius: Theme.radiusM).fill(Theme.surface.opacity(max(0.65, store.backgroundOpacity))))
+        .background(RoundedRectangle(cornerRadius: Theme.radiusM).fill(Theme.surface))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusM)
                 .stroke(isEditing || isHovered ? Theme.accent.opacity(isEditing ? 0.85 : 0.46)
-                        : Theme.border.opacity(0.25), lineWidth: Theme.hairline)
+                        : Theme.border.opacity(0.72), lineWidth: Theme.hairline)
         )
         .onHover { isHovered = $0 }
         .onChange(of: editFocused) { focused in
@@ -156,5 +122,43 @@ struct TodoRow: View {
             }
         }
         .onDisappear { store.commitEditing(ifMatching: todo.id) }
+    }
+}
+
+struct PriorityMenu: View {
+    @EnvironmentObject var store: TodoStore
+    let todo: Todo
+
+    private var priorityColor: Color {
+        switch todo.priority {
+        case .high: return Theme.priorityHigh
+        case .normal: return Theme.textMuted
+        case .low: return Theme.priorityLow
+        }
+    }
+
+    var body: some View {
+        Menu {
+            ForEach(TodoPriority.allCases, id: \.self) { priority in
+                Button {
+                    store.setPriority(priority, for: todo.id)
+                } label: {
+                    Label(priority.title,
+                          systemImage: todo.priority == priority ? "checkmark.circle.fill" : "circle")
+                }
+            }
+        } label: {
+            Image(systemName: todo.priority == .high ? "flag.fill" : "flag")
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundColor(priorityColor)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .tint(priorityColor)
+        .frame(width: 28, height: 28)
+        .help("优先级：\(todo.priority.title)")
+        .accessibilityLabel("设置\(todo.text)的优先级，当前\(todo.priority.title)")
     }
 }
